@@ -1,0 +1,4 @@
+_build/
+elm-stuff/
+node_modules/
+test/

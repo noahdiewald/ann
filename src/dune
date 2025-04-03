@@ -1,0 +1,10 @@
+(executable
+ (public_name ann)       
+ (name main)
+ (libraries dream tyxml))
+
+(rule
+ (target static.ml)
+ (deps (source_tree ../static))
+ (action (with-stdout-to %{null}
+  (run ocaml-crunch -m plain ../static -o %{target}))))
