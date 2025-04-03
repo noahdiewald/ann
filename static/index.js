@@ -9628,7 +9628,7 @@
           return { $: "Set_elm_builtin", a };
         };
         var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-        var $author$project$Main$init = function(options) {
+        var $author$project$Main$init = function(flags) {
           var model = {
             blocks: $elm$core$Dict$empty,
             counter: 0,
@@ -9637,12 +9637,11 @@
             editingMeta: $author$project$Main$NoneT,
             lines: $elm$core$Dict$empty,
             meta: A2($author$project$Main$Meta, $elm$core$Set$empty, $elm$core$Dict$empty),
-            options,
             order: _List_Nil,
             selection: $elm$core$Maybe$Nothing,
             temp: "",
-            text: "",
-            text_name: "",
+            text: flags.text,
+            text_name: flags.file,
             tokens: $elm$core$Dict$empty
           };
           return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);

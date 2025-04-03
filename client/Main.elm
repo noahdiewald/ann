@@ -40,7 +40,6 @@ type alias Model =
     , text_name : String
     , tokens : Dict Int Token
     , order : List Int
-    , options : Flags
     , counter : Int
     , selection : Maybe ( Int, Int )
     , editing : Maybe Mode
@@ -106,14 +105,13 @@ main =
 
 
 init : Flags -> ( Model, Cmd Msg )
-init options =
+init flags =
     let
         model =
-            { text = ""
-            , text_name = ""
+            { text = flags.text
+            , text_name = flags.file
             , tokens = Dict.empty
             , order = []
-            , options = options
             , counter = 0
             , selection = Nothing
             , editing = Nothing
@@ -126,14 +124,6 @@ init options =
             }
     in
     ( model, Cmd.none )
-
-    -- else
-    --     ( model, getDoc options )
-
-
--- getDoc : Options -> Cmd Msg
--- getDoc _ =
---     Cmd.none
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
