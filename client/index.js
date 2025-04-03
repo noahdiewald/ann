@@ -46,12 +46,14 @@ const getDocSelection = () => {
 }
 
 // Add a node for elm to attach
-const $root = document.createElement('div');
-document.body.appendChild($root);
+const $root = document.createElement('div')
+document.body.appendChild($root)
+
+const dataelement = document.getElementById('dataelement')
 
 const app = Elm.Main.init({
   node: $root,
-  flags: { text: "This is text" }
+  flags: { text: dataelement.getAttribute('data-incontent') }
 });
 
 // Ensure the ports have been defined in elm deal with them.

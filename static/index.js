@@ -12580,9 +12580,10 @@
       };
       var $root = document.createElement("div");
       document.body.appendChild($root);
+      var dataelement = document.getElementById("dataelement");
       var app = import_Main.Elm.Main.init({
         node: $root,
-        flags: { text: "This is text" }
+        flags: { text: dataelement.getAttribute("data-incontent") }
       });
       if (app.ports) {
         if (app.ports.requestDocSelection && app.ports.receivedDocSelection) {
