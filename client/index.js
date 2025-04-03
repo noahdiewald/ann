@@ -53,7 +53,10 @@ const dataelement = document.getElementById('dataelement')
 
 const app = Elm.Main.init({
   node: $root,
-  flags: { text: dataelement.getAttribute('data-incontent') }
+  flags: {
+    text: dataelement.getAttribute('data-incontent'),
+    file: dataelement.getAttribute('data-infile')
+  }
 });
 
 // Ensure the ports have been defined in elm deal with them.

@@ -16,6 +16,7 @@ import Dict exposing (Dict)
 
 type Msg
     = NewText String
+    | NewTextName String
     | GenerateTokens
     | ReceivedSelection String
     | TokenFocused
@@ -36,6 +37,7 @@ type Msg
 
 type alias Model =
     { text : String
+    , text_name : String
     , tokens : Dict Int Token
     , order : List Int
     , options : Flags
@@ -89,6 +91,7 @@ type MetaT
 
 type alias Flags =
     { text : String
+    , file : String
     }
 
 
@@ -107,6 +110,7 @@ init options =
     let
         model =
             { text = ""
+            , text_name = ""
             , tokens = Dict.empty
             , order = []
             , options = options
@@ -137,6 +141,9 @@ update msg model =
     case msg of
         NewText s ->
             ( { model | text = s }, Cmd.none )
+
+        NewTextName s ->
+            ( { model | text_name = s }, Cmd.none )
 
         GenerateTokens ->
             let
@@ -835,18 +842,23 @@ view : Model -> Html.Html Msg
 view model =
     Html.main_ [ Attr.class "container-fluid" ] <|
         if Dict.isEmpty model.tokens then
-            [ Html.textarea
+            [ Html.input
+              [ Attr.value model.text_name
+              , Attr.type_ "text"
+              , Event.onInput NewTextName
+              ] []
+            , Html.textarea
                 [ Attr.value model.text
                 , Event.onInput NewText
-                ]
-                []
+                ] []
             , Html.button
                 [ Event.onClick GenerateTokens ]
                 [ Html.text "Generate Tokens" ]
             ]
 
         else
-            [ viewEditorPanel model
+            [ Html.h1 [] [ Html.text model.text_name ]
+            , viewEditorPanel model
             , Html.div [ Attr.class "grid-with-side" ]
                 [ Html.div [ Attr.class "side" ] []
                 , viewEditPane model

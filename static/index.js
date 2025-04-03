@@ -9642,6 +9642,7 @@
             selection: $elm$core$Maybe$Nothing,
             temp: "",
             text: "",
+            text_name: "",
             tokens: $elm$core$Dict$empty
           };
           return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -10183,6 +10184,15 @@
                   _Utils_update(
                     model,
                     { text: s }
+                  ),
+                  $elm$core$Platform$Cmd$none
+                );
+              case "NewTextName":
+                var s = msg.a;
+                return _Utils_Tuple2(
+                  _Utils_update(
+                    model,
+                    { text_name: s }
                   ),
                   $elm$core$Platform$Cmd$none
                 );
@@ -11147,6 +11157,10 @@
         var $author$project$Main$NewText = function(a) {
           return { $: "NewText", a };
         };
+        var $author$project$Main$NewTextName = function(a) {
+          return { $: "NewTextName", a };
+        };
+        var $elm$html$Html$h1 = _VirtualDom_node("h1");
         var $elm$html$Html$main_ = _VirtualDom_node("main");
         var $elm$html$Html$textarea = _VirtualDom_node("textarea");
         var $elm$html$Html$article = _VirtualDom_node("article");
@@ -12459,6 +12473,17 @@
             $elm$core$Dict$isEmpty(model.tokens) ? _List_fromArray(
               [
                 A2(
+                  $elm$html$Html$input,
+                  _List_fromArray(
+                    [
+                      $elm$html$Html$Attributes$value(model.text_name),
+                      $elm$html$Html$Attributes$type_("text"),
+                      $elm$html$Html$Events$onInput($author$project$Main$NewTextName)
+                    ]
+                  ),
+                  _List_Nil
+                ),
+                A2(
                   $elm$html$Html$textarea,
                   _List_fromArray(
                     [
@@ -12484,6 +12509,15 @@
               ]
             ) : _List_fromArray(
               [
+                A2(
+                  $elm$html$Html$h1,
+                  _List_Nil,
+                  _List_fromArray(
+                    [
+                      $elm$html$Html$text(model.text_name)
+                    ]
+                  )
+                ),
                 $author$project$Main$viewEditorPanel(model),
                 A2(
                   $elm$html$Html$div,
@@ -12527,13 +12561,19 @@
           A2(
             $elm$json$Json$Decode$andThen,
             function(text) {
-              return $elm$json$Json$Decode$succeed(
-                { text }
+              return A2(
+                $elm$json$Json$Decode$andThen,
+                function(file) {
+                  return $elm$json$Json$Decode$succeed(
+                    { file, text }
+                  );
+                },
+                A2($elm$json$Json$Decode$field, "file", $elm$json$Json$Decode$string)
               );
             },
             A2($elm$json$Json$Decode$field, "text", $elm$json$Json$Decode$string)
           )
-        )({ "versions": { "elm": "0.19.1" }, "types": { "message": "Main.Msg", "aliases": { "Main.Index": { "args": [], "type": "( Basics.Int, Basics.Int )" } }, "unions": { "Main.Msg": { "args": [], "tags": { "NewText": ["String.String"], "GenerateTokens": [], "ReceivedSelection": ["String.String"], "TokenFocused": [], "TokenStringChanged": ["Basics.Int", "String.String"], "RemoveToken": ["Basics.Int"], "SwapTokenRight": ["Basics.Int"], "SwapTokenLeft": ["Basics.Int"], "Split": ["Main.PartT", "Basics.Int"], "Merge": ["Main.PartT", "Basics.Int"], "InsertToken": ["Basics.Int"], "ChangeEditPane": ["Main.PartT"], "Edit": ["Main.MetaT"], "TempChanged": ["String.String"], "Save": ["Main.MetaT"], "CancelEditing": [], "Remove": ["Main.MetaT"] } }, "Basics.Int": { "args": [], "tags": { "Int": [] } }, "Main.MetaT": { "args": [], "tags": { "TagsT": ["Main.PartT", "Main.Index"], "PropValueT": ["Main.PartT", "Main.Index", "String.String"], "PropKeyT": ["Main.PartT", "Main.Index", "String.String"], "NoneT": [] } }, "Main.PartT": { "args": [], "tags": { "TextT": [], "BlockT": [], "LineT": [], "TokenT": [], "NoteT": [] } }, "String.String": { "args": [], "tags": { "String": [] } } } } }) } });
+        )({ "versions": { "elm": "0.19.1" }, "types": { "message": "Main.Msg", "aliases": { "Main.Index": { "args": [], "type": "( Basics.Int, Basics.Int )" } }, "unions": { "Main.Msg": { "args": [], "tags": { "NewText": ["String.String"], "NewTextName": ["String.String"], "GenerateTokens": [], "ReceivedSelection": ["String.String"], "TokenFocused": [], "TokenStringChanged": ["Basics.Int", "String.String"], "RemoveToken": ["Basics.Int"], "SwapTokenRight": ["Basics.Int"], "SwapTokenLeft": ["Basics.Int"], "Split": ["Main.PartT", "Basics.Int"], "Merge": ["Main.PartT", "Basics.Int"], "InsertToken": ["Basics.Int"], "ChangeEditPane": ["Main.PartT"], "Edit": ["Main.MetaT"], "TempChanged": ["String.String"], "Save": ["Main.MetaT"], "CancelEditing": [], "Remove": ["Main.MetaT"] } }, "Basics.Int": { "args": [], "tags": { "Int": [] } }, "Main.MetaT": { "args": [], "tags": { "TagsT": ["Main.PartT", "Main.Index"], "PropValueT": ["Main.PartT", "Main.Index", "String.String"], "PropKeyT": ["Main.PartT", "Main.Index", "String.String"], "NoneT": [] } }, "Main.PartT": { "args": [], "tags": { "TextT": [], "BlockT": [], "LineT": [], "TokenT": [], "NoteT": [] } }, "String.String": { "args": [], "tags": { "String": [] } } } } }) } });
       })(exports);
     }
   });
@@ -12583,7 +12623,10 @@
       var dataelement = document.getElementById("dataelement");
       var app = import_Main.Elm.Main.init({
         node: $root,
-        flags: { text: dataelement.getAttribute("data-incontent") }
+        flags: {
+          text: dataelement.getAttribute("data-incontent"),
+          file: dataelement.getAttribute("data-infile")
+        }
       });
       if (app.ports) {
         if (app.ports.requestDocSelection && app.ports.receivedDocSelection) {
