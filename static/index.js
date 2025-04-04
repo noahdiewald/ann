@@ -3180,6 +3180,135 @@
             }
           }));
         }
+        var _Http_toTask = F3(function(router, toTask, request) {
+          return _Scheduler_binding(function(callback) {
+            function done(response) {
+              callback(toTask(request.expect.a(response)));
+            }
+            var xhr = new XMLHttpRequest();
+            xhr.addEventListener("error", function() {
+              done($elm$http$Http$NetworkError_);
+            });
+            xhr.addEventListener("timeout", function() {
+              done($elm$http$Http$Timeout_);
+            });
+            xhr.addEventListener("load", function() {
+              done(_Http_toResponse(request.expect.b, xhr));
+            });
+            $elm$core$Maybe$isJust(request.tracker) && _Http_track(router, xhr, request.tracker.a);
+            try {
+              xhr.open(request.method, request.url, true);
+            } catch (e) {
+              return done($elm$http$Http$BadUrl_(request.url));
+            }
+            _Http_configureRequest(xhr, request);
+            request.body.a && xhr.setRequestHeader("Content-Type", request.body.a);
+            xhr.send(request.body.b);
+            return function() {
+              xhr.c = true;
+              xhr.abort();
+            };
+          });
+        });
+        function _Http_configureRequest(xhr, request) {
+          for (var headers = request.headers; headers.b; headers = headers.b) {
+            xhr.setRequestHeader(headers.a.a, headers.a.b);
+          }
+          xhr.timeout = request.timeout.a || 0;
+          xhr.responseType = request.expect.d;
+          xhr.withCredentials = request.allowCookiesFromOtherDomains;
+        }
+        function _Http_toResponse(toBody, xhr) {
+          return A2(
+            200 <= xhr.status && xhr.status < 300 ? $elm$http$Http$GoodStatus_ : $elm$http$Http$BadStatus_,
+            _Http_toMetadata(xhr),
+            toBody(xhr.response)
+          );
+        }
+        function _Http_toMetadata(xhr) {
+          return {
+            url: xhr.responseURL,
+            statusCode: xhr.status,
+            statusText: xhr.statusText,
+            headers: _Http_parseHeaders(xhr.getAllResponseHeaders())
+          };
+        }
+        function _Http_parseHeaders(rawHeaders) {
+          if (!rawHeaders) {
+            return $elm$core$Dict$empty;
+          }
+          var headers = $elm$core$Dict$empty;
+          var headerPairs = rawHeaders.split("\r\n");
+          for (var i = headerPairs.length; i--; ) {
+            var headerPair = headerPairs[i];
+            var index = headerPair.indexOf(": ");
+            if (index > 0) {
+              var key = headerPair.substring(0, index);
+              var value = headerPair.substring(index + 2);
+              headers = A3($elm$core$Dict$update, key, function(oldValue) {
+                return $elm$core$Maybe$Just(
+                  $elm$core$Maybe$isJust(oldValue) ? value + ", " + oldValue.a : value
+                );
+              }, headers);
+            }
+          }
+          return headers;
+        }
+        var _Http_expect = F3(function(type, toBody, toValue) {
+          return {
+            $: 0,
+            d: type,
+            b: toBody,
+            a: toValue
+          };
+        });
+        var _Http_mapExpect = F2(function(func, expect) {
+          return {
+            $: 0,
+            d: expect.d,
+            b: expect.b,
+            a: function(x) {
+              return func(expect.a(x));
+            }
+          };
+        });
+        function _Http_toDataView(arrayBuffer) {
+          return new DataView(arrayBuffer);
+        }
+        var _Http_emptyBody = { $: 0 };
+        var _Http_pair = F2(function(a, b) {
+          return { $: 0, a, b };
+        });
+        function _Http_toFormData(parts) {
+          for (var formData = new FormData(); parts.b; parts = parts.b) {
+            var part = parts.a;
+            formData.append(part.a, part.b);
+          }
+          return formData;
+        }
+        var _Http_bytesToBlob = F2(function(mime, bytes) {
+          return new Blob([bytes], { type: mime });
+        });
+        function _Http_track(router, xhr, tracker) {
+          xhr.upload.addEventListener("progress", function(event) {
+            if (xhr.c) {
+              return;
+            }
+            _Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Sending({
+              sent: event.loaded,
+              size: event.total
+            }))));
+          });
+          xhr.addEventListener("progress", function(event) {
+            if (xhr.c) {
+              return;
+            }
+            _Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Receiving({
+              received: event.loaded,
+              size: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
+            }))));
+          });
+        }
         var $elm$core$List$cons = _List_cons;
         var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
         var $elm$core$Array$foldr = F3(
@@ -9624,25 +9753,193 @@
         );
         var $author$project$Main$NoneT = { $: "NoneT" };
         var $author$project$Main$TextT = { $: "TextT" };
+        var $author$project$Main$AnnData = F7(
+          function(text, text_name, tokens, order, blocks, lines, meta) {
+            return { blocks, lines, meta, order, text, text_name, tokens };
+          }
+        );
+        var $elm$json$Json$Decode$map7 = _Json_map7;
         var $elm$core$Set$Set_elm_builtin = function(a) {
           return { $: "Set_elm_builtin", a };
         };
         var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
+        var $elm$core$Set$insert = F2(
+          function(key, _v0) {
+            var dict = _v0.a;
+            return $elm$core$Set$Set_elm_builtin(
+              A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict)
+            );
+          }
+        );
+        var $elm$core$Set$fromList = function(list) {
+          return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
+        };
+        var $elm$core$Tuple$pair = F2(
+          function(a, b) {
+            return _Utils_Tuple2(a, b);
+          }
+        );
+        var $author$project$Main$metaD = A3(
+          $elm$json$Json$Decode$map2,
+          F2(
+            function(tags, props) {
+              return A2(
+                $author$project$Main$Meta,
+                $elm$core$Set$fromList(tags),
+                $elm$core$Dict$fromList(props)
+              );
+            }
+          ),
+          A2(
+            $elm$json$Json$Decode$field,
+            "tags",
+            $elm$json$Json$Decode$list($elm$json$Json$Decode$string)
+          ),
+          A2(
+            $elm$json$Json$Decode$field,
+            "properties",
+            $elm$json$Json$Decode$list(
+              A3(
+                $elm$json$Json$Decode$map2,
+                $elm$core$Tuple$pair,
+                A2($elm$json$Json$Decode$field, "key", $elm$json$Json$Decode$string),
+                A2($elm$json$Json$Decode$field, "value", $elm$json$Json$Decode$string)
+              )
+            )
+          )
+        );
+        var $author$project$Main$metaIndexD = A4(
+          $elm$json$Json$Decode$map3,
+          F3(
+            function(l, r, m) {
+              return _Utils_Tuple2(
+                _Utils_Tuple2(l, r),
+                m
+              );
+            }
+          ),
+          A2($elm$json$Json$Decode$field, "left", $elm$json$Json$Decode$int),
+          A2($elm$json$Json$Decode$field, "right", $elm$json$Json$Decode$int),
+          A2($elm$json$Json$Decode$field, "meta", $author$project$Main$metaD)
+        );
+        var $author$project$Main$Token = F3(
+          function(string, meta, identifier) {
+            return { identifier, meta, string };
+          }
+        );
+        var $author$project$Main$tokenD = A4(
+          $elm$json$Json$Decode$map3,
+          $author$project$Main$Token,
+          A2($elm$json$Json$Decode$field, "string", $elm$json$Json$Decode$string),
+          A2($elm$json$Json$Decode$field, "meta", $author$project$Main$metaD),
+          A2($elm$json$Json$Decode$field, "identifier", $elm$json$Json$Decode$int)
+        );
+        var $author$project$Main$tokenIndexD = A2(
+          $elm$json$Json$Decode$map,
+          function(t) {
+            return _Utils_Tuple2(t.identifier, t);
+          },
+          $author$project$Main$tokenD
+        );
+        var $author$project$Main$annDataD = A8(
+          $elm$json$Json$Decode$map7,
+          $author$project$Main$AnnData,
+          A2($elm$json$Json$Decode$field, "text", $elm$json$Json$Decode$string),
+          A2($elm$json$Json$Decode$field, "text_name", $elm$json$Json$Decode$string),
+          A2(
+            $elm$json$Json$Decode$field,
+            "tokens",
+            A2(
+              $elm$json$Json$Decode$map,
+              $elm$core$Dict$fromList,
+              $elm$json$Json$Decode$list($author$project$Main$tokenIndexD)
+            )
+          ),
+          A2(
+            $elm$json$Json$Decode$field,
+            "order",
+            $elm$json$Json$Decode$list($elm$json$Json$Decode$int)
+          ),
+          A2(
+            $elm$json$Json$Decode$field,
+            "blocks",
+            A2(
+              $elm$json$Json$Decode$map,
+              $elm$core$Dict$fromList,
+              $elm$json$Json$Decode$list($author$project$Main$metaIndexD)
+            )
+          ),
+          A2(
+            $elm$json$Json$Decode$field,
+            "lines",
+            A2(
+              $elm$json$Json$Decode$map,
+              $elm$core$Dict$fromList,
+              $elm$json$Json$Decode$list($author$project$Main$metaIndexD)
+            )
+          ),
+          A2($elm$json$Json$Decode$field, "meta", $author$project$Main$metaD)
+        );
+        var $elm$core$List$maximum = function(list) {
+          if (list.b) {
+            var x = list.a;
+            var xs = list.b;
+            return $elm$core$Maybe$Just(
+              A3($elm$core$List$foldl, $elm$core$Basics$max, x, xs)
+            );
+          } else {
+            return $elm$core$Maybe$Nothing;
+          }
+        };
         var $author$project$Main$init = function(flags) {
-          var model = {
+          var empty_ann = {
             blocks: $elm$core$Dict$empty,
-            counter: 0,
-            editPane: $author$project$Main$TextT,
-            editing: $elm$core$Maybe$Nothing,
-            editingMeta: $author$project$Main$NoneT,
             lines: $elm$core$Dict$empty,
             meta: A2($author$project$Main$Meta, $elm$core$Set$empty, $elm$core$Dict$empty),
             order: _List_Nil,
-            selection: $elm$core$Maybe$Nothing,
-            temp: "",
-            text: flags.text,
-            text_name: flags.file,
+            text: "",
+            text_name: "",
             tokens: $elm$core$Dict$empty
+          };
+          var _v0 = function() {
+            if (flags.text !== "") {
+              var _v1 = A2($elm$json$Json$Decode$decodeString, $author$project$Main$annDataD, flags.text);
+              if (_v1.$ === "Ok") {
+                var ad = _v1.a;
+                return _Utils_Tuple2(ad, "");
+              } else {
+                var e = _v1.a;
+                return _Utils_Tuple2(
+                  empty_ann,
+                  $elm$json$Json$Decode$errorToString(e)
+                );
+              }
+            } else {
+              return _Utils_Tuple2(empty_ann, "");
+            }
+          }();
+          var ann_data = _v0.a;
+          var err = _v0.b;
+          var model = {
+            blocks: ann_data.blocks,
+            counter: A2(
+              $elm$core$Maybe$withDefault,
+              0,
+              $elm$core$List$maximum(ann_data.order)
+            ),
+            editPane: $author$project$Main$TextT,
+            editing: $elm$core$Maybe$Nothing,
+            editingMeta: $author$project$Main$NoneT,
+            error_msg: err,
+            lines: ann_data.lines,
+            meta: ann_data.meta,
+            order: ann_data.order,
+            selection: $elm$core$Maybe$Nothing,
+            success_msg: "",
+            temp: "",
+            text: ann_data.text,
+            text_name: ann_data.text_name,
+            tokens: ann_data.tokens
           };
           return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
         };
@@ -9675,6 +9972,9 @@
             return { $: "TagsT", a, b };
           }
         );
+        var $author$project$Main$Wrote = function(a) {
+          return { $: "Wrote", a };
+        };
         var $elm$core$Maybe$andThen = F2(
           function(callback, maybeValue) {
             if (maybeValue.$ === "Just") {
@@ -9685,6 +9985,236 @@
             }
           }
         );
+        var $elm$json$Json$Encode$int = _Json_wrap;
+        var $author$project$Main$keyvalE = function(keyval) {
+          return $elm$json$Json$Encode$object(
+            _List_fromArray(
+              [
+                _Utils_Tuple2(
+                  "key",
+                  $elm$json$Json$Encode$string(keyval.a)
+                ),
+                _Utils_Tuple2(
+                  "value",
+                  $elm$json$Json$Encode$string(keyval.b)
+                )
+              ]
+            )
+          );
+        };
+        var $author$project$Main$metaE = function(meta) {
+          return $elm$json$Json$Encode$object(
+            _List_fromArray(
+              [
+                _Utils_Tuple2(
+                  "tags",
+                  A2(
+                    $elm$json$Json$Encode$list,
+                    $elm$json$Json$Encode$string,
+                    $elm$core$Set$toList(meta.tags)
+                  )
+                ),
+                _Utils_Tuple2(
+                  "properties",
+                  A2(
+                    $elm$json$Json$Encode$list,
+                    $author$project$Main$keyvalE,
+                    $elm$core$Dict$toList(meta.properties)
+                  )
+                )
+              ]
+            )
+          );
+        };
+        var $author$project$Main$metaIndexE = function(metaindex) {
+          return $elm$json$Json$Encode$object(
+            _List_fromArray(
+              [
+                _Utils_Tuple2(
+                  "left",
+                  $elm$json$Json$Encode$int(metaindex.a.a)
+                ),
+                _Utils_Tuple2(
+                  "right",
+                  $elm$json$Json$Encode$int(metaindex.a.b)
+                ),
+                _Utils_Tuple2(
+                  "meta",
+                  $author$project$Main$metaE(metaindex.b)
+                )
+              ]
+            )
+          );
+        };
+        var $author$project$Main$tokenE = function(token) {
+          return $elm$json$Json$Encode$object(
+            _List_fromArray(
+              [
+                _Utils_Tuple2(
+                  "string",
+                  $elm$json$Json$Encode$string(token.string)
+                ),
+                _Utils_Tuple2(
+                  "meta",
+                  $author$project$Main$metaE(token.meta)
+                ),
+                _Utils_Tuple2(
+                  "identifier",
+                  $elm$json$Json$Encode$int(token.identifier)
+                )
+              ]
+            )
+          );
+        };
+        var $author$project$Main$annDataE = function(model) {
+          return $elm$json$Json$Encode$object(
+            _List_fromArray(
+              [
+                _Utils_Tuple2(
+                  "text",
+                  $elm$json$Json$Encode$string(model.text)
+                ),
+                _Utils_Tuple2(
+                  "text_name",
+                  $elm$json$Json$Encode$string(model.text_name)
+                ),
+                _Utils_Tuple2(
+                  "tokens",
+                  A2(
+                    $elm$json$Json$Encode$list,
+                    $author$project$Main$tokenE,
+                    A2(
+                      $elm$core$List$map,
+                      $elm$core$Tuple$second,
+                      $elm$core$Dict$toList(model.tokens)
+                    )
+                  )
+                ),
+                _Utils_Tuple2(
+                  "order",
+                  A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$int, model.order)
+                ),
+                _Utils_Tuple2(
+                  "blocks",
+                  A2(
+                    $elm$json$Json$Encode$list,
+                    $author$project$Main$metaIndexE,
+                    $elm$core$Dict$toList(model.blocks)
+                  )
+                ),
+                _Utils_Tuple2(
+                  "lines",
+                  A2(
+                    $elm$json$Json$Encode$list,
+                    $author$project$Main$metaIndexE,
+                    $elm$core$Dict$toList(model.lines)
+                  )
+                ),
+                _Utils_Tuple2(
+                  "meta",
+                  $author$project$Main$metaE(model.meta)
+                )
+              ]
+            )
+          );
+        };
+        var $elm$http$Http$BadStatus_ = F2(
+          function(a, b) {
+            return { $: "BadStatus_", a, b };
+          }
+        );
+        var $elm$http$Http$BadUrl_ = function(a) {
+          return { $: "BadUrl_", a };
+        };
+        var $elm$http$Http$GoodStatus_ = F2(
+          function(a, b) {
+            return { $: "GoodStatus_", a, b };
+          }
+        );
+        var $elm$http$Http$NetworkError_ = { $: "NetworkError_" };
+        var $elm$http$Http$Receiving = function(a) {
+          return { $: "Receiving", a };
+        };
+        var $elm$http$Http$Sending = function(a) {
+          return { $: "Sending", a };
+        };
+        var $elm$http$Http$Timeout_ = { $: "Timeout_" };
+        var $elm$core$Maybe$isJust = function(maybe) {
+          if (maybe.$ === "Just") {
+            return true;
+          } else {
+            return false;
+          }
+        };
+        var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
+        var $elm$http$Http$expectStringResponse = F2(
+          function(toMsg, toResult) {
+            return A3(
+              _Http_expect,
+              "",
+              $elm$core$Basics$identity,
+              A2($elm$core$Basics$composeR, toResult, toMsg)
+            );
+          }
+        );
+        var $elm$http$Http$BadBody = function(a) {
+          return { $: "BadBody", a };
+        };
+        var $elm$http$Http$BadStatus = function(a) {
+          return { $: "BadStatus", a };
+        };
+        var $elm$http$Http$BadUrl = function(a) {
+          return { $: "BadUrl", a };
+        };
+        var $elm$http$Http$NetworkError = { $: "NetworkError" };
+        var $elm$http$Http$Timeout = { $: "Timeout" };
+        var $elm$core$Result$mapError = F2(
+          function(f, result) {
+            if (result.$ === "Ok") {
+              var v = result.a;
+              return $elm$core$Result$Ok(v);
+            } else {
+              var e = result.a;
+              return $elm$core$Result$Err(
+                f(e)
+              );
+            }
+          }
+        );
+        var $elm$http$Http$resolve = F2(
+          function(toResult, response) {
+            switch (response.$) {
+              case "BadUrl_":
+                var url = response.a;
+                return $elm$core$Result$Err(
+                  $elm$http$Http$BadUrl(url)
+                );
+              case "Timeout_":
+                return $elm$core$Result$Err($elm$http$Http$Timeout);
+              case "NetworkError_":
+                return $elm$core$Result$Err($elm$http$Http$NetworkError);
+              case "BadStatus_":
+                var metadata = response.a;
+                return $elm$core$Result$Err(
+                  $elm$http$Http$BadStatus(metadata.statusCode)
+                );
+              default:
+                var body = response.b;
+                return A2(
+                  $elm$core$Result$mapError,
+                  $elm$http$Http$BadBody,
+                  toResult(body)
+                );
+            }
+          }
+        );
+        var $elm$http$Http$expectString = function(toMsg) {
+          return A2(
+            $elm$http$Http$expectStringResponse,
+            toMsg,
+            $elm$http$Http$resolve($elm$core$Result$Ok)
+          );
+        };
         var $elm$core$List$filter = F2(
           function(isGood, list) {
             return A3(
@@ -9699,17 +10229,6 @@
             );
           }
         );
-        var $elm$core$Set$insert = F2(
-          function(key, _v0) {
-            var dict = _v0.a;
-            return $elm$core$Set$Set_elm_builtin(
-              A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict)
-            );
-          }
-        );
-        var $elm$core$Set$fromList = function(list) {
-          return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
-        };
         var $elm_community$list_extra$List$Extra$findIndexHelp = F3(
           function(index, predicate, list) {
             findIndexHelp:
@@ -9756,6 +10275,13 @@
             return $elm$core$Maybe$Nothing;
           }
         };
+        var $elm$http$Http$jsonBody = function(value) {
+          return A2(
+            _Http_pair,
+            "application/json",
+            A2($elm$json$Json$Encode$encode, 0, value)
+          );
+        };
         var $author$project$Main$key1 = A2($elm$core$Basics$composeR, $elm$core$Tuple$first, $elm$core$Tuple$first);
         var $author$project$Main$key2 = A2($elm$core$Basics$composeR, $elm$core$Tuple$first, $elm$core$Tuple$second);
         var $elm$core$Maybe$map = F2(
@@ -9770,6 +10296,185 @@
             }
           }
         );
+        var $elm$http$Http$Request = function(a) {
+          return { $: "Request", a };
+        };
+        var $elm$http$Http$State = F2(
+          function(reqs, subs) {
+            return { reqs, subs };
+          }
+        );
+        var $elm$http$Http$init = $elm$core$Task$succeed(
+          A2($elm$http$Http$State, $elm$core$Dict$empty, _List_Nil)
+        );
+        var $elm$core$Process$kill = _Scheduler_kill;
+        var $elm$core$Process$spawn = _Scheduler_spawn;
+        var $elm$http$Http$updateReqs = F3(
+          function(router, cmds, reqs) {
+            updateReqs:
+              while (true) {
+                if (!cmds.b) {
+                  return $elm$core$Task$succeed(reqs);
+                } else {
+                  var cmd = cmds.a;
+                  var otherCmds = cmds.b;
+                  if (cmd.$ === "Cancel") {
+                    var tracker = cmd.a;
+                    var _v2 = A2($elm$core$Dict$get, tracker, reqs);
+                    if (_v2.$ === "Nothing") {
+                      var $temp$router = router, $temp$cmds = otherCmds, $temp$reqs = reqs;
+                      router = $temp$router;
+                      cmds = $temp$cmds;
+                      reqs = $temp$reqs;
+                      continue updateReqs;
+                    } else {
+                      var pid = _v2.a;
+                      return A2(
+                        $elm$core$Task$andThen,
+                        function(_v3) {
+                          return A3(
+                            $elm$http$Http$updateReqs,
+                            router,
+                            otherCmds,
+                            A2($elm$core$Dict$remove, tracker, reqs)
+                          );
+                        },
+                        $elm$core$Process$kill(pid)
+                      );
+                    }
+                  } else {
+                    var req = cmd.a;
+                    return A2(
+                      $elm$core$Task$andThen,
+                      function(pid2) {
+                        var _v4 = req.tracker;
+                        if (_v4.$ === "Nothing") {
+                          return A3($elm$http$Http$updateReqs, router, otherCmds, reqs);
+                        } else {
+                          var tracker2 = _v4.a;
+                          return A3(
+                            $elm$http$Http$updateReqs,
+                            router,
+                            otherCmds,
+                            A3($elm$core$Dict$insert, tracker2, pid2, reqs)
+                          );
+                        }
+                      },
+                      $elm$core$Process$spawn(
+                        A3(
+                          _Http_toTask,
+                          router,
+                          $elm$core$Platform$sendToApp(router),
+                          req
+                        )
+                      )
+                    );
+                  }
+                }
+              }
+          }
+        );
+        var $elm$http$Http$onEffects = F4(
+          function(router, cmds, subs, state) {
+            return A2(
+              $elm$core$Task$andThen,
+              function(reqs) {
+                return $elm$core$Task$succeed(
+                  A2($elm$http$Http$State, reqs, subs)
+                );
+              },
+              A3($elm$http$Http$updateReqs, router, cmds, state.reqs)
+            );
+          }
+        );
+        var $elm$http$Http$maybeSend = F4(
+          function(router, desiredTracker, progress, _v0) {
+            var actualTracker = _v0.a;
+            var toMsg = _v0.b;
+            return _Utils_eq(desiredTracker, actualTracker) ? $elm$core$Maybe$Just(
+              A2(
+                $elm$core$Platform$sendToApp,
+                router,
+                toMsg(progress)
+              )
+            ) : $elm$core$Maybe$Nothing;
+          }
+        );
+        var $elm$http$Http$onSelfMsg = F3(
+          function(router, _v0, state) {
+            var tracker = _v0.a;
+            var progress = _v0.b;
+            return A2(
+              $elm$core$Task$andThen,
+              function(_v1) {
+                return $elm$core$Task$succeed(state);
+              },
+              $elm$core$Task$sequence(
+                A2(
+                  $elm$core$List$filterMap,
+                  A3($elm$http$Http$maybeSend, router, tracker, progress),
+                  state.subs
+                )
+              )
+            );
+          }
+        );
+        var $elm$http$Http$Cancel = function(a) {
+          return { $: "Cancel", a };
+        };
+        var $elm$http$Http$cmdMap = F2(
+          function(func, cmd) {
+            if (cmd.$ === "Cancel") {
+              var tracker = cmd.a;
+              return $elm$http$Http$Cancel(tracker);
+            } else {
+              var r = cmd.a;
+              return $elm$http$Http$Request(
+                {
+                  allowCookiesFromOtherDomains: r.allowCookiesFromOtherDomains,
+                  body: r.body,
+                  expect: A2(_Http_mapExpect, func, r.expect),
+                  headers: r.headers,
+                  method: r.method,
+                  timeout: r.timeout,
+                  tracker: r.tracker,
+                  url: r.url
+                }
+              );
+            }
+          }
+        );
+        var $elm$http$Http$MySub = F2(
+          function(a, b) {
+            return { $: "MySub", a, b };
+          }
+        );
+        var $elm$http$Http$subMap = F2(
+          function(func, _v0) {
+            var tracker = _v0.a;
+            var toMsg = _v0.b;
+            return A2(
+              $elm$http$Http$MySub,
+              tracker,
+              A2($elm$core$Basics$composeR, toMsg, func)
+            );
+          }
+        );
+        _Platform_effectManagers["Http"] = _Platform_createManager($elm$http$Http$init, $elm$http$Http$onEffects, $elm$http$Http$onSelfMsg, $elm$http$Http$cmdMap, $elm$http$Http$subMap);
+        var $elm$http$Http$command = _Platform_leaf("Http");
+        var $elm$http$Http$subscription = _Platform_leaf("Http");
+        var $elm$http$Http$request = function(r) {
+          return $elm$http$Http$command(
+            $elm$http$Http$Request(
+              { allowCookiesFromOtherDomains: false, body: r.body, expect: r.expect, headers: r.headers, method: r.method, timeout: r.timeout, tracker: r.tracker, url: r.url }
+            )
+          );
+        };
+        var $elm$http$Http$post = function(r) {
+          return $elm$http$Http$request(
+            { body: r.body, expect: r.expect, headers: _List_Nil, method: "POST", timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url }
+          );
+        };
         var $elm$core$String$filter = _String_filter;
         var $elm$core$Basics$modBy = _Basics_modBy;
         var $miniBill$elm_unicode$Unicode$isAlpha = function(c) {
@@ -10013,11 +10718,6 @@
             )
           );
         };
-        var $elm$core$Tuple$pair = F2(
-          function(a, b) {
-            return _Utils_Tuple2(a, b);
-          }
-        );
         var $author$project$Main$selectionD = $elm$json$Json$Decode$nullable(
           A3(
             $elm$json$Json$Decode$map2,
@@ -11141,7 +11841,7 @@
                   default:
                     return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
                 }
-              default:
+              case "CancelEditing":
                 return _Utils_Tuple2(
                   _Utils_update(
                     model,
@@ -11149,9 +11849,100 @@
                   ),
                   $elm$core$Platform$Cmd$none
                 );
+              case "Write":
+                return _Utils_Tuple2(
+                  model,
+                  $elm$http$Http$post(
+                    {
+                      body: $elm$http$Http$jsonBody(
+                        $author$project$Main$annDataE(model)
+                      ),
+                      expect: $elm$http$Http$expectString($author$project$Main$Wrote),
+                      url: "/save/" + model.text_name
+                    }
+                  )
+                );
+              case "Wrote":
+                if (msg.a.$ === "Err") {
+                  var e = msg.a.a;
+                  switch (e.$) {
+                    case "BadUrl":
+                      var s = e.a;
+                      return _Utils_Tuple2(
+                        _Utils_update(
+                          model,
+                          { error_msg: "There was a bad URL when saving: " + s }
+                        ),
+                        $elm$core$Platform$Cmd$none
+                      );
+                    case "Timeout":
+                      return _Utils_Tuple2(
+                        _Utils_update(
+                          model,
+                          { error_msg: "There was a timeout while saving." }
+                        ),
+                        $elm$core$Platform$Cmd$none
+                      );
+                    case "NetworkError":
+                      return _Utils_Tuple2(
+                        _Utils_update(
+                          model,
+                          { error_msg: "There was a network error when saving." }
+                        ),
+                        $elm$core$Platform$Cmd$none
+                      );
+                    case "BadStatus":
+                      var i = e.a;
+                      return _Utils_Tuple2(
+                        _Utils_update(
+                          model,
+                          {
+                            error_msg: "There was a bad status when saving: " + $elm$core$String$fromInt(i)
+                          }
+                        ),
+                        $elm$core$Platform$Cmd$none
+                      );
+                    default:
+                      var s = e.a;
+                      return _Utils_Tuple2(
+                        _Utils_update(
+                          model,
+                          { error_msg: "The body contained errors when saving: " + s }
+                        ),
+                        $elm$core$Platform$Cmd$none
+                      );
+                  }
+                } else {
+                  var s = msg.a.a;
+                  return _Utils_Tuple2(
+                    _Utils_update(
+                      model,
+                      { success_msg: s }
+                    ),
+                    $elm$core$Platform$Cmd$none
+                  );
+                }
+              case "ClearError":
+                return _Utils_Tuple2(
+                  _Utils_update(
+                    model,
+                    { error_msg: "" }
+                  ),
+                  $elm$core$Platform$Cmd$none
+                );
+              default:
+                return _Utils_Tuple2(
+                  _Utils_update(
+                    model,
+                    { success_msg: "" }
+                  ),
+                  $elm$core$Platform$Cmd$none
+                );
             }
           }
         );
+        var $author$project$Main$ClearError = { $: "ClearError" };
+        var $author$project$Main$ClearSuccess = { $: "ClearSuccess" };
         var $author$project$Main$GenerateTokens = { $: "GenerateTokens" };
         var $author$project$Main$NewText = function(a) {
           return { $: "NewText", a };
@@ -11159,8 +11950,10 @@
         var $author$project$Main$NewTextName = function(a) {
           return { $: "NewTextName", a };
         };
-        var $elm$html$Html$h1 = _VirtualDom_node("h1");
+        var $author$project$Main$Write = { $: "Write" };
         var $elm$html$Html$main_ = _VirtualDom_node("main");
+        var $elm$html$Html$nav = _VirtualDom_node("nav");
+        var $elm$html$Html$strong = _VirtualDom_node("strong");
         var $elm$html$Html$textarea = _VirtualDom_node("textarea");
         var $elm$html$Html$article = _VirtualDom_node("article");
         var $elm_community$maybe_extra$Maybe$Extra$cons = F2(
@@ -12461,6 +13254,82 @@
             return $elm$html$Html$text("");
           }
         };
+        var $author$project$Main$dialog = F2(
+          function(attributes, children) {
+            return A3($elm$html$Html$node, "dialog", attributes, children);
+          }
+        );
+        var $elm$html$Html$header = _VirtualDom_node("header");
+        var $author$project$Main$viewModal = F2(
+          function(message, msg) {
+            var attrs = message === "" ? _List_Nil : _List_fromArray(
+              [
+                A2($elm$html$Html$Attributes$attribute, "open", "")
+              ]
+            );
+            return A2(
+              $author$project$Main$dialog,
+              attrs,
+              _List_fromArray(
+                [
+                  A2(
+                    $elm$html$Html$article,
+                    _List_Nil,
+                    _List_fromArray(
+                      [
+                        A2(
+                          $elm$html$Html$header,
+                          _List_Nil,
+                          _List_fromArray(
+                            [
+                              A2(
+                                $elm$html$Html$button,
+                                _List_fromArray(
+                                  [
+                                    A2($elm$html$Html$Attributes$attribute, "aria-label", "Close"),
+                                    A2($elm$html$Html$Attributes$attribute, "rel", "prev"),
+                                    $elm$html$Html$Events$onClick(msg)
+                                  ]
+                                ),
+                                _List_Nil
+                              ),
+                              A2(
+                                $elm$html$Html$p,
+                                _List_Nil,
+                                _List_fromArray(
+                                  [
+                                    A2(
+                                      $elm$html$Html$strong,
+                                      _List_Nil,
+                                      _List_fromArray(
+                                        [
+                                          $elm$html$Html$text("Message")
+                                        ]
+                                      )
+                                    )
+                                  ]
+                                )
+                              )
+                            ]
+                          )
+                        ),
+                        A2(
+                          $elm$html$Html$p,
+                          _List_Nil,
+                          _List_fromArray(
+                            [
+                              $elm$html$Html$text(message)
+                            ]
+                          )
+                        )
+                      ]
+                    )
+                  )
+                ]
+              )
+            );
+          }
+        );
         var $author$project$Main$view = function(model) {
           return A2(
             $elm$html$Html$main_,
@@ -12471,6 +13340,7 @@
             ),
             $elm$core$Dict$isEmpty(model.tokens) ? _List_fromArray(
               [
+                A2($author$project$Main$viewModal, model.error_msg, $author$project$Main$ClearError),
                 A2(
                   $elm$html$Html$input,
                   _List_fromArray(
@@ -12508,12 +13378,68 @@
               ]
             ) : _List_fromArray(
               [
+                A2($author$project$Main$viewModal, model.error_msg, $author$project$Main$ClearError),
+                A2($author$project$Main$viewModal, model.success_msg, $author$project$Main$ClearSuccess),
                 A2(
-                  $elm$html$Html$h1,
+                  $elm$html$Html$nav,
                   _List_Nil,
                   _List_fromArray(
                     [
-                      $elm$html$Html$text(model.text_name)
+                      A2(
+                        $elm$html$Html$ul,
+                        _List_Nil,
+                        _List_fromArray(
+                          [
+                            A2(
+                              $elm$html$Html$li,
+                              _List_Nil,
+                              _List_fromArray(
+                                [
+                                  A2(
+                                    $elm$html$Html$strong,
+                                    _List_Nil,
+                                    _List_fromArray(
+                                      [
+                                        $elm$html$Html$text(model.text_name)
+                                      ]
+                                    )
+                                  )
+                                ]
+                              )
+                            )
+                          ]
+                        )
+                      ),
+                      A2(
+                        $elm$html$Html$ul,
+                        _List_Nil,
+                        _List_fromArray(
+                          [
+                            A2(
+                              $elm$html$Html$li,
+                              _List_Nil,
+                              _List_fromArray(
+                                [
+                                  A2(
+                                    $elm$html$Html$a,
+                                    _List_fromArray(
+                                      [
+                                        $elm$html$Html$Attributes$href("#"),
+                                        $elm$html$Html$Events$onClick($author$project$Main$Write)
+                                      ]
+                                    ),
+                                    _List_fromArray(
+                                      [
+                                        $elm$html$Html$text("Save")
+                                      ]
+                                    )
+                                  )
+                                ]
+                              )
+                            )
+                          ]
+                        )
+                      )
                     ]
                   )
                 ),
@@ -12562,17 +13488,17 @@
             function(text) {
               return A2(
                 $elm$json$Json$Decode$andThen,
-                function(file) {
+                function(proj) {
                   return $elm$json$Json$Decode$succeed(
-                    { file, text }
+                    { proj, text }
                   );
                 },
-                A2($elm$json$Json$Decode$field, "file", $elm$json$Json$Decode$string)
+                A2($elm$json$Json$Decode$field, "proj", $elm$json$Json$Decode$string)
               );
             },
             A2($elm$json$Json$Decode$field, "text", $elm$json$Json$Decode$string)
           )
-        )({ "versions": { "elm": "0.19.1" }, "types": { "message": "Main.Msg", "aliases": { "Main.Index": { "args": [], "type": "( Basics.Int, Basics.Int )" } }, "unions": { "Main.Msg": { "args": [], "tags": { "NewText": ["String.String"], "NewTextName": ["String.String"], "GenerateTokens": [], "ReceivedSelection": ["String.String"], "TokenFocused": [], "TokenStringChanged": ["Basics.Int", "String.String"], "RemoveToken": ["Basics.Int"], "SwapTokenRight": ["Basics.Int"], "SwapTokenLeft": ["Basics.Int"], "Split": ["Main.PartT", "Basics.Int"], "Merge": ["Main.PartT", "Basics.Int"], "InsertToken": ["Basics.Int"], "ChangeEditPane": ["Main.PartT"], "Edit": ["Main.MetaT"], "TempChanged": ["String.String"], "Save": ["Main.MetaT"], "CancelEditing": [], "Remove": ["Main.MetaT"] } }, "Basics.Int": { "args": [], "tags": { "Int": [] } }, "Main.MetaT": { "args": [], "tags": { "TagsT": ["Main.PartT", "Main.Index"], "PropValueT": ["Main.PartT", "Main.Index", "String.String"], "PropKeyT": ["Main.PartT", "Main.Index", "String.String"], "NoneT": [] } }, "Main.PartT": { "args": [], "tags": { "TextT": [], "BlockT": [], "LineT": [], "TokenT": [], "NoteT": [] } }, "String.String": { "args": [], "tags": { "String": [] } } } } }) } });
+        )({ "versions": { "elm": "0.19.1" }, "types": { "message": "Main.Msg", "aliases": { "Main.Index": { "args": [], "type": "( Basics.Int, Basics.Int )" } }, "unions": { "Main.Msg": { "args": [], "tags": { "NewText": ["String.String"], "NewTextName": ["String.String"], "GenerateTokens": [], "ReceivedSelection": ["String.String"], "TokenFocused": [], "TokenStringChanged": ["Basics.Int", "String.String"], "RemoveToken": ["Basics.Int"], "SwapTokenRight": ["Basics.Int"], "SwapTokenLeft": ["Basics.Int"], "Split": ["Main.PartT", "Basics.Int"], "Merge": ["Main.PartT", "Basics.Int"], "InsertToken": ["Basics.Int"], "ChangeEditPane": ["Main.PartT"], "Edit": ["Main.MetaT"], "TempChanged": ["String.String"], "Save": ["Main.MetaT"], "CancelEditing": [], "Remove": ["Main.MetaT"], "Write": [], "Wrote": ["Result.Result Http.Error String.String"], "ClearError": [], "ClearSuccess": [] } }, "Http.Error": { "args": [], "tags": { "BadUrl": ["String.String"], "Timeout": [], "NetworkError": [], "BadStatus": ["Basics.Int"], "BadBody": ["String.String"] } }, "Basics.Int": { "args": [], "tags": { "Int": [] } }, "Main.MetaT": { "args": [], "tags": { "TagsT": ["Main.PartT", "Main.Index"], "PropValueT": ["Main.PartT", "Main.Index", "String.String"], "PropKeyT": ["Main.PartT", "Main.Index", "String.String"], "NoneT": [] } }, "Main.PartT": { "args": [], "tags": { "TextT": [], "BlockT": [], "LineT": [], "TokenT": [], "NoteT": [] } }, "Result.Result": { "args": ["error", "value"], "tags": { "Ok": ["value"], "Err": ["error"] } }, "String.String": { "args": [], "tags": { "String": [] } } } } }) } });
       })(exports);
     }
   });
@@ -12623,8 +13549,8 @@
       var app = import_Main.Elm.Main.init({
         node: $root,
         flags: {
-          text: dataelement.getAttribute("data-incontent"),
-          file: dataelement.getAttribute("data-infile")
+          proj: dataelement.getAttribute("data-proj_text"),
+          text: dataelement.getAttribute("data-ann_text")
         }
       });
       if (app.ports) {

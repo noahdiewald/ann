@@ -15,6 +15,7 @@ depends: [
   "crunch"
   "tyxml"
   "core"
+  "core_unix"
   "odoc" {with-doc}
 ]
 build: [

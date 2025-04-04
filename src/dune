@@ -1,7 +1,7 @@
 (executable
  (public_name ann)       
  (name main)
- (libraries dream tyxml core))
+ (libraries dream tyxml core core_unix.sys_unix))
 
 (rule
  (target static.ml)

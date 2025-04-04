@@ -49,17 +49,20 @@ const getDocSelection = () => {
 const $root = document.createElement('div')
 document.body.appendChild($root)
 
+// An element that holds data from the file openned as well as
+// potential project data.
 const dataelement = document.getElementById('dataelement')
 
+// Initialize elm with flags.
 const app = Elm.Main.init({
   node: $root,
   flags: {
-    text: dataelement.getAttribute('data-incontent'),
-    file: dataelement.getAttribute('data-infile')
+    proj: dataelement.getAttribute('data-proj_text'),
+    text: dataelement.getAttribute('data-ann_text')
   }
 });
 
-// Ensure the ports have been defined in elm deal with them.
+// Ensure the ports have been defined in elm. Then define them here.
 if (app.ports) {
   if (app.ports.requestDocSelection && app.ports.receivedDocSelection) {
     app.ports.requestDocSelection.subscribe(() => {

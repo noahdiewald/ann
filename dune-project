@@ -17,7 +17,7 @@
  (name ann)
  (synopsis "Annotate text")
  (description "An application for annotating text with a linguistics focus.")
- (depends ocaml dream crunch tyxml core)
+ (depends ocaml dream crunch tyxml core core_unix)
  (tags
   ("annotation" "linguistics" your project)))
 

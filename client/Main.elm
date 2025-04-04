@@ -1,17 +1,19 @@
 module Main exposing (..)
 
 import Browser
+import Dict exposing (Dict)
 import Html
 import Html.Attributes as Attr
 import Html.Events as Event
+import Http
 import Interface exposing (receivedSelection, requestSelection)
 import Json.Decode as D
+import Json.Encode as E
 import List.Extra
 import Maybe.Extra
 import Set exposing (Set)
 import Tuple exposing (first, second)
 import Unicode exposing (isAlpha, isSeparator)
-import Dict exposing (Dict)
 
 
 type Msg
@@ -33,6 +35,10 @@ type Msg
     | Save MetaT
     | CancelEditing
     | Remove MetaT
+    | Write
+    | Wrote (Result Http.Error String)
+    | ClearError
+    | ClearSuccess
 
 
 type alias Model =
@@ -49,6 +55,19 @@ type alias Model =
     , editPane : PartT
     , editingMeta : MetaT
     , temp : String
+    , error_msg : String
+    , success_msg : String
+    }
+
+
+type alias AnnData =
+    { text : String
+    , text_name : String
+    , tokens : Dict Int Token
+    , order : List Int
+    , blocks : Dict ( Int, Int ) Meta
+    , lines : Dict ( Int, Int ) Meta
+    , meta : Meta
     }
 
 
@@ -78,9 +97,10 @@ type PartT
     | NoteT
 
 
-type alias Index = ( Int, Int )
+type alias Index =
+    ( Int, Int )
 
-    
+
 type MetaT
     = TagsT PartT Index
     | PropValueT PartT Index String
@@ -90,7 +110,7 @@ type MetaT
 
 type alias Flags =
     { text : String
-    , file : String
+    , proj : String
     }
 
 
@@ -107,20 +127,44 @@ main =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
-        model =
-            { text = flags.text
-            , text_name = flags.file
+        empty_ann =
+            { text = ""
+            , text_name = ""
             , tokens = Dict.empty
             , order = []
-            , counter = 0
-            , selection = Nothing
-            , editing = Nothing
             , blocks = Dict.empty
             , lines = Dict.empty
             , meta = Meta Set.empty Dict.empty
+            }
+
+        ( ann_data, err ) =
+            if flags.text /= "" then
+                case D.decodeString annDataD flags.text of
+                    Ok ad ->
+                        ( ad, "" )
+
+                    Err e ->
+                        ( empty_ann, D.errorToString e )
+
+            else
+                ( empty_ann, "" )
+
+        model =
+            { text = ann_data.text
+            , text_name = ann_data.text_name
+            , tokens = ann_data.tokens
+            , order = ann_data.order
+            , counter = Maybe.withDefault 0 (List.maximum ann_data.order)
+            , selection = Nothing
+            , editing = Nothing
+            , blocks = ann_data.blocks
+            , lines = ann_data.lines
+            , meta = ann_data.meta
             , editPane = TextT
             , editingMeta = NoneT
             , temp = ""
+            , error_msg = err
+            , success_msg = ""
             }
     in
     ( model, Cmd.none )
@@ -444,7 +488,7 @@ update msg model =
 
         ChangeEditPane part ->
             ( { model | editPane = part }, Cmd.none )
-                
+
         Edit (TagsT part index) ->
             let
                 tagSet =
@@ -478,8 +522,8 @@ update msg model =
 
         Edit (PropKeyT part index s) ->
             ( { model
-                  | editingMeta = PropKeyT part index s
-                  , temp = ""
+                | editingMeta = PropKeyT part index s
+                , temp = ""
               }
             , Cmd.none
             )
@@ -508,12 +552,12 @@ update msg model =
                             ""
             in
             ( { model
-                  | editingMeta = PropValueT part index s
-                  , temp = value
+                | editingMeta = PropValueT part index s
+                , temp = value
               }
             , Cmd.none
             )
-            
+
         Edit _ ->
             ( model, Cmd.none )
 
@@ -527,14 +571,16 @@ update msg model =
                         meta =
                             model.meta
                     in
-                    ( { model | meta =
-                            { meta | properties =
-                                  Dict.remove s meta.properties
+                    ( { model
+                        | meta =
+                            { meta
+                                | properties =
+                                    Dict.remove s meta.properties
                             }
                       }
                     , Cmd.none
                     )
-                    
+
                 LineT ->
                     let
                         line =
@@ -547,10 +593,12 @@ update msg model =
 
                                 Just l ->
                                     Dict.insert index
-                                        { l | properties =
-                                              Dict.remove s
-                                              l.properties
-                                        } model.lines
+                                        { l
+                                            | properties =
+                                                Dict.remove s
+                                                    l.properties
+                                        }
+                                        model.lines
                     in
                     ( { model | lines = lines }, Cmd.none )
 
@@ -566,19 +614,21 @@ update msg model =
 
                                 Just b ->
                                     Dict.insert index
-                                        { b | properties =
-                                              Dict.remove s
-                                              b.properties
-                                        } model.blocks
+                                        { b
+                                            | properties =
+                                                Dict.remove s
+                                                    b.properties
+                                        }
+                                        model.blocks
                     in
                     ( { model | blocks = blocks }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
-                
+
         Remove _ ->
             ( model, Cmd.none )
-                
+
         Save (PropKeyT part index _) ->
             let
                 nmodel =
@@ -593,10 +643,13 @@ update msg model =
                         meta =
                             model.meta
                     in
-                    ( { nmodel | meta =
-                            { meta | properties =
-                                  Dict.insert model.temp ""
-                                  meta.properties
+                    ( { nmodel
+                        | meta =
+                            { meta
+                                | properties =
+                                    Dict.insert model.temp
+                                        ""
+                                        meta.properties
                             }
                       }
                     , Cmd.none
@@ -614,11 +667,14 @@ update msg model =
 
                                 Just l ->
                                     Dict.insert index
-                                        { l | properties =
-                                              Dict.insert
-                                              model.temp ""
-                                              l.properties
-                                        } model.lines
+                                        { l
+                                            | properties =
+                                                Dict.insert
+                                                    model.temp
+                                                    ""
+                                                    l.properties
+                                        }
+                                        model.lines
                     in
                     ( { nmodel | lines = lines }, Cmd.none )
 
@@ -634,17 +690,20 @@ update msg model =
 
                                 Just b ->
                                     Dict.insert index
-                                        { b | properties =
-                                              Dict.insert
-                                              model.temp ""
-                                              b.properties
-                                        } model.blocks
+                                        { b
+                                            | properties =
+                                                Dict.insert
+                                                    model.temp
+                                                    ""
+                                                    b.properties
+                                        }
+                                        model.blocks
                     in
                     ( { nmodel | blocks = blocks }, Cmd.none )
 
                 _ ->
                     ( nmodel, Cmd.none )
-                
+
         Save (PropValueT part index s) ->
             let
                 nmodel =
@@ -659,10 +718,13 @@ update msg model =
                         meta =
                             model.meta
                     in
-                    ( { nmodel | meta =
-                            { meta | properties =
-                                  Dict.insert s model.temp
-                                  meta.properties
+                    ( { nmodel
+                        | meta =
+                            { meta
+                                | properties =
+                                    Dict.insert s
+                                        model.temp
+                                        meta.properties
                             }
                       }
                     , Cmd.none
@@ -680,11 +742,14 @@ update msg model =
 
                                 Just l ->
                                     Dict.insert index
-                                        { l | properties =
-                                              Dict.insert
-                                              s model.temp
-                                              l.properties
-                                        } model.lines
+                                        { l
+                                            | properties =
+                                                Dict.insert
+                                                    s
+                                                    model.temp
+                                                    l.properties
+                                        }
+                                        model.lines
                     in
                     ( { nmodel | lines = lines }, Cmd.none )
 
@@ -700,17 +765,20 @@ update msg model =
 
                                 Just b ->
                                     Dict.insert index
-                                        { b | properties =
-                                              Dict.insert
-                                              s model.temp
-                                              b.properties
-                                        } model.blocks
+                                        { b
+                                            | properties =
+                                                Dict.insert
+                                                    s
+                                                    model.temp
+                                                    b.properties
+                                        }
+                                        model.blocks
                     in
                     ( { nmodel | blocks = blocks }, Cmd.none )
 
                 _ ->
                     ( nmodel, Cmd.none )
-                                
+
         Save (TagsT part index) ->
             let
                 tags =
@@ -784,6 +852,64 @@ update msg model =
             , Cmd.none
             )
 
+        Write ->
+            ( model
+            , Http.post
+                { url = "/save/" ++ model.text_name
+                , body = Http.jsonBody (annDataE model)
+                , expect = Http.expectString Wrote
+                }
+            )
+
+        Wrote (Err e) ->
+            case e of
+                Http.BadUrl s ->
+                    ( { model
+                        | error_msg =
+                            "There was a bad URL when saving: " ++ s
+                      }
+                    , Cmd.none
+                    )
+
+                Http.Timeout ->
+                    ( { model | error_msg = "There was a timeout while saving." }
+                    , Cmd.none
+                    )
+
+                Http.NetworkError ->
+                    ( { model
+                        | error_msg =
+                            "There was a network error when saving."
+                      }
+                    , Cmd.none
+                    )
+
+                Http.BadStatus i ->
+                    ( { model
+                        | error_msg =
+                            "There was a bad status when saving: "
+                                ++ String.fromInt i
+                      }
+                    , Cmd.none
+                    )
+
+                Http.BadBody s ->
+                    ( { model
+                        | error_msg =
+                            "The body contained errors when saving: " ++ s
+                      }
+                    , Cmd.none
+                    )
+
+        Wrote (Ok s) ->
+            ( { model | success_msg = s }, Cmd.none )
+
+        ClearError ->
+            ( { model | error_msg = "" }, Cmd.none )
+
+        ClearSuccess ->
+            ( { model | success_msg = "" }, Cmd.none )
+
 
 splitGrouping :
     Model
@@ -828,26 +954,78 @@ subscriptions model =
     receivedSelection ReceivedSelection
 
 
+dialog : List (Html.Attribute msg) -> List (Html.Html msg) -> Html.Html msg
+dialog attributes children =
+    Html.node "dialog" attributes children
+
+
+viewModal : String -> Msg -> Html.Html Msg
+viewModal message msg =
+    let
+        attrs =
+            if message == "" then
+                []
+
+            else
+                [ Attr.attribute "open" "" ]
+    in
+    dialog attrs
+        [ Html.article []
+            [ Html.header []
+                [ Html.button
+                    [ Attr.attribute "aria-label" "Close"
+                    , Attr.attribute "rel" "prev"
+                    , Event.onClick msg
+                    ]
+                    []
+                , Html.p [] [ Html.strong [] [ Html.text "Message" ] ]
+                ]
+            , Html.p [] [ Html.text message ]
+            ]
+        ]
+
+
 view : Model -> Html.Html Msg
 view model =
     Html.main_ [ Attr.class "container-fluid" ] <|
         if Dict.isEmpty model.tokens then
-            [ Html.input
-              [ Attr.value model.text_name
-              , Attr.type_ "text"
-              , Event.onInput NewTextName
-              ] []
+            [ viewModal model.error_msg ClearError
+            , Html.input
+                [ Attr.value model.text_name
+                , Attr.type_ "text"
+                , Event.onInput NewTextName
+                ]
+                []
             , Html.textarea
                 [ Attr.value model.text
                 , Event.onInput NewText
-                ] []
+                ]
+                []
             , Html.button
                 [ Event.onClick GenerateTokens ]
                 [ Html.text "Generate Tokens" ]
             ]
 
         else
-            [ Html.h1 [] [ Html.text model.text_name ]
+            [ viewModal model.error_msg ClearError
+            , viewModal model.success_msg ClearSuccess
+            , Html.nav []
+                [ Html.ul []
+                    [ Html.li []
+                        [ Html.strong []
+                            [ Html.text model.text_name ]
+                        ]
+                    ]
+                , Html.ul []
+                    [ Html.li []
+                        [ Html.a
+                            [ Attr.href "#"
+                            , Event.onClick Write
+                            ]
+                            [ Html.text "Save" ]
+                        ]
+                    ]
+                ]
             , viewEditorPanel model
             , Html.div [ Attr.class "grid-with-side" ]
                 [ Html.div [ Attr.class "side" ] []
@@ -979,59 +1157,69 @@ viewTagViewer part index model =
         ]
 
 
-viewPropertyRow : PartT -> ( Int, Int ) -> Model
-                -> ( String, String ) -> Html.Html Msg
-viewPropertyRow part index model (k, v) =
+viewPropertyRow :
+    PartT
+    -> ( Int, Int )
+    -> Model
+    -> ( String, String )
+    -> Html.Html Msg
+viewPropertyRow part index model ( k, v ) =
     let
         default =
             [ Html.td [] [ Html.text k ]
             , Html.td [] [ Html.text v ]
             , Html.td []
                 [ Html.button
-                      [ Event.onClick <|
-                            Edit (PropValueT part index k) ]
-                      [ Html.text "Edit" ]
+                    [ Event.onClick <|
+                        Edit (PropValueT part index k)
+                    ]
+                    [ Html.text "Edit" ]
                 ]
             , Html.td []
                 [ Html.button
-                      [ Event.onClick <|
-                            Remove (PropKeyT part index k) ]
-                      [ Html.text "Delete" ]
+                    [ Event.onClick <|
+                        Remove (PropKeyT part index k)
+                    ]
+                    [ Html.text "Delete" ]
                 ]
             ]
     in
     Html.tr []
-        ( case model.editingMeta of
-              PropValueT p i k_ ->
-                  if p == part && i == index && k_ == k then
-                      [ Html.td []
-                            [ Html.text k ]
-                      , Html.td []
-                          [ Html.input
-                                [ Attr.value model.temp
-                                , Event.onInput TempChanged
-                                , Attr.type_ "text"
-                                ] []
-                          ]
-                      , Html.td []
-                          [ Html.button
-                                [ Event.onClick <|
-                                      Save model.editingMeta ]
-                                [ Html.text "Done" ]
-                          ]
-                      , Html.td []
-                          [ Html.button
-                                [ Event.onClick CancelEditing ]
-                                [ Html.text "Cancel" ]
-                          ]
-                      ]
-                  else
-                      default
-              _ ->
-                  default
+        (case model.editingMeta of
+            PropValueT p i k_ ->
+                if p == part && i == index && k_ == k then
+                    [ Html.td []
+                        [ Html.text k ]
+                    , Html.td []
+                        [ Html.input
+                            [ Attr.value model.temp
+                            , Event.onInput TempChanged
+                            , Attr.type_ "text"
+                            ]
+                            []
+                        ]
+                    , Html.td []
+                        [ Html.button
+                            [ Event.onClick <|
+                                Save model.editingMeta
+                            ]
+                            [ Html.text "Done" ]
+                        ]
+                    , Html.td []
+                        [ Html.button
+                            [ Event.onClick CancelEditing ]
+                            [ Html.text "Cancel" ]
+                        ]
+                    ]
+
+                else
+                    default
+
+            _ ->
+                default
         )
 
-        
+
 viewProperties : PartT -> ( Int, Int ) -> Model -> Html.Html Msg
 viewProperties part index model =
     let
@@ -1058,49 +1246,51 @@ viewProperties part index model =
         default =
             Html.button
                 [ Attr.class "quiet"
-                , Event.onClick <| Edit ( PropKeyT part index "" )
+                , Event.onClick <| Edit (PropKeyT part index "")
                 ]
-            [ Html.text "Add" ]
+                [ Html.text "Add" ]
     in
     Html.section []
         [ Html.table []
-              [ Html.thead []
-                    [ Html.tr []
-                          [ Html.th [] [ Html.text "Property" ]
-                          , Html.th [] [ Html.text "Value" ]
-                          , Html.td [] []
-                          , Html.td [] []
-                          ]
+            [ Html.thead []
+                [ Html.tr []
+                    [ Html.th [] [ Html.text "Property" ]
+                    , Html.th [] [ Html.text "Value" ]
+                    , Html.td [] []
+                    , Html.td [] []
                     ]
-              , Html.tbody []
-                  (List.map
-                       (viewPropertyRow part index model)
-                       properties
-                  )
-              ]
+                ]
+            , Html.tbody []
+                (List.map
+                    (viewPropertyRow part index model)
+                    properties
+                )
+            ]
         , case model.editingMeta of
-              PropKeyT p i _ ->
-                  if p == part && i == index then
-                      Html.div []
-                          [ Html.input
-                                [ Attr.type_ "text"
-                                , Attr.value model.temp
-                                , Event.onInput TempChanged
-                                ] []
-                          , Html.button
-                              [ Event.onClick <|
-                                    Save model.editingMeta ]
-                              [ Html.text "Done" ]
-                          , Html.button
-                              [ Event.onClick CancelEditing ]
-                              [ Html.text "Cancel" ]
-                          ]
+            PropKeyT p i _ ->
+                if p == part && i == index then
+                    Html.div []
+                        [ Html.input
+                            [ Attr.type_ "text"
+                            , Attr.value model.temp
+                            , Event.onInput TempChanged
+                            ]
+                            []
+                        , Html.button
+                            [ Event.onClick <|
+                                Save model.editingMeta
+                            ]
+                            [ Html.text "Done" ]
+                        , Html.button
+                            [ Event.onClick CancelEditing ]
+                            [ Html.text "Cancel" ]
+                        ]
 
-                  else
-                      default
+                else
+                    default
 
-              _ ->
-                  default
+            _ ->
+                default
         ]
 
 
@@ -1133,8 +1323,11 @@ viewEditText model =
         ]
 
 
-viewEditGrouping : PartT -> (Model -> Dict (Int, Int) Meta)
-             -> Model -> Html.Html Msg
+viewEditGrouping :
+    PartT
+    -> (Model -> Dict ( Int, Int ) Meta)
+    -> Model
+    -> Html.Html Msg
 viewEditGrouping part group model =
     let
         tags ( k, v ) =
@@ -1158,7 +1351,7 @@ viewEditGrouping part group model =
         [ Html.details []
             [ Html.summary []
                 [ Html.text "Tags" ]
-            , (group model)
+            , group model
                 |> Dict.toList
                 |> List.map tags
                 |> Html.ol []
@@ -1167,7 +1360,7 @@ viewEditGrouping part group model =
         , Html.details []
             [ Html.summary []
                 [ Html.text "Properties" ]
-            , (group model)
+            , group model
                 |> Dict.toList
                 |> List.map properties
                 |> Html.ol []
@@ -1402,11 +1595,6 @@ getIndex identifier model =
         |> Maybe.withDefault (List.length model.order)
 
 
-exampleText : String
-exampleText =
-    "Dodani memeide mono memeide inanite boyo epene ime epene ompadike dao doa go onowede go ne goñe doobe koña koña anike doobe bao bao me booko tei. Boto kodomai ante onowede godani koña koña ante me bo kote bao bao ameñonga oonge weno ta ñemiñenani wei tei wenamai toma onoga ñawoke boyo epodo onoga oñonani onoga mei onoga mei onoga mei mono tomemo aya epede oñoñomo penai gawadani ate bo kote weginpa ante.\n Boyo inte dodani apededani manomai baga timpa ante boyo koga timpa dodani ante. Ñowo poni ñowo moni mini kewemoni gawamoni boto imo ino mani ñomo bo ko weta aye ino bo ko weta manino bo koka penke penke meñate wodo wenta. Dodani monomai boyo dodani kogatima ante apededani. Maninke aye adoke."
-
-      
 key1 : ( ( a, b ), v ) -> a
 key1 =
     first >> first
@@ -1415,3 +1603,96 @@ key1 =
 key2 : ( ( a, b ), v ) -> b
 key2 =
     first >> second
+
+
+annDataE : Model -> E.Value
+annDataE model =
+    E.object
+        [ ( "text", E.string model.text )
+        , ( "text_name", E.string model.text_name )
+        , ( "tokens", E.list tokenE <| List.map second <| Dict.toList model.tokens )
+        , ( "order", E.list E.int model.order )
+        , ( "blocks", E.list metaIndexE (Dict.toList model.blocks) )
+        , ( "lines", E.list metaIndexE (Dict.toList model.lines) )
+        , ( "meta", metaE model.meta )
+        ]
+
+
+annDataD : D.Decoder AnnData
+annDataD =
+    D.map7 AnnData
+        (D.field "text" D.string)
+        (D.field "text_name" D.string)
+        (D.field "tokens" <| D.map Dict.fromList <| D.list tokenIndexD)
+        (D.field "order" <| D.list D.int)
+        (D.field "blocks" <| D.map Dict.fromList <| D.list metaIndexD)
+        (D.field "lines" <| D.map Dict.fromList <| D.list metaIndexD)
+        (D.field "meta" metaD)
+
+
+tokenE : Token -> E.Value
+tokenE token =
+    E.object
+        [ ( "string", E.string token.string )
+        , ( "meta", metaE token.meta )
+        , ( "identifier", E.int token.identifier )
+        ]
+
+
+tokenIndexD : D.Decoder ( Int, Token )
+tokenIndexD =
+    D.map (\t -> ( t.identifier, t )) tokenD
+
+
+tokenD : D.Decoder Token
+tokenD =
+    D.map3 Token
+        (D.field "string" D.string)
+        (D.field "meta" metaD)
+        (D.field "identifier" D.int)
+
+
+metaIndexE : ( ( Int, Int ), Meta ) -> E.Value
+metaIndexE metaindex =
+    E.object
+        [ ( "left", E.int (first <| first metaindex) )
+        , ( "right", E.int (second <| first metaindex) )
+        , ( "meta", metaE (second metaindex) )
+        ]
+
+
+metaIndexD : D.Decoder ( ( Int, Int ), Meta )
+metaIndexD =
+    D.map3 (\l r m -> ( ( l, r ), m ))
+        (D.field "left" D.int)
+        (D.field "right" D.int)
+        (D.field "meta" metaD)
+
+
+metaE : Meta -> E.Value
+metaE meta =
+    E.object
+        [ ( "tags", E.list E.string (Set.toList meta.tags) )
+        , ( "properties", E.list keyvalE (Dict.toList meta.properties) )
+        ]
+
+
+keyvalE : ( String, String ) -> E.Value
+keyvalE keyval =
+    E.object
+        [ ( "key", E.string (first keyval) )
+        , ( "value", E.string (second keyval) )
+        ]
+
+
+metaD : D.Decoder Meta
+metaD =
+    D.map2 (\tags props -> Meta (Set.fromList tags) (Dict.fromList props))
+        (D.field "tags" <| D.list D.string)
+        (D.field "properties" <|
+            D.list
+                (D.map2 Tuple.pair
+                    (D.field "key" D.string)
+                    (D.field "value" D.string)
+                )
+        )

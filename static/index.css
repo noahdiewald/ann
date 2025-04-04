@@ -111,3 +111,11 @@ details {
 .quiet {
     background-color: var(--pico-background-color);
 }
+
+.hidden {
+    display: none;
+}
+
+.onleft {
+    float: left;
+}
