@@ -2,8 +2,9 @@
 opam-version: "2.0"
 synopsis: "Annotate text"
 description: "An application for annotating text with a linguistics focus."
+maintainer: ["Noah Diewald <github.s0r40@passmail.net>"]
 authors: ["Noah Diewald <github.s0r40@passmail.net>"]
-license: "GPLv3"
+license: "GPL-3.0-or-later"
 tags: ["annotation" "linguistics" "your" "project"]
 homepage: "https://github.com/noahdiewald/ann"
 doc: "https://github.com/noahdiewald/ann"

@@ -9,7 +9,9 @@
 
 (authors "Noah Diewald <github.s0r40@passmail.net>")
 
-(license GPLv3)
+(maintainers "Noah Diewald <github.s0r40@passmail.net>")
+
+(license GPL-3.0-or-later)
 
 (documentation https://github.com/noahdiewald/ann)
 

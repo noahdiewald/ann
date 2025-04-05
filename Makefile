@@ -3,7 +3,7 @@ build:
 	dune build
 
 server:
-	dune exec -- ann ipsum.json &
+	dune exec -- ann $(jsonfile) &
 
 stop:
 	curl -X POST http://localhost:8080/exit || true
@@ -17,3 +17,7 @@ watchcycle:
 	done
 
 watch: build server watchcycle
+
+deps:
+	npm install
+	opam install . --deps-only
