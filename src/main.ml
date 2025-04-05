@@ -23,7 +23,7 @@ let loader _root path _request =
   | Some asset -> Dream.respond asset
 
 let runserver ann_text proj_text =
-  Dream.run ~error_handler:Dream.debug_error_handler
+  Dream.run
   @@ Dream.logger
   @@ Dream.livereload
   @@ Dream.router [
@@ -46,19 +46,21 @@ let runserver ann_text proj_text =
            (fun _ ->
               Dream.body request >>=
               (fun body ->
+                 let json = Yojson.Safe.from_string body
+                          |> Yojson.Safe.pretty_to_string in
                  Lwt_io.with_file ann_file
                    ~mode:Lwt_io.Output
                    ~flags:[O_WRONLY; O_CREAT; O_NONBLOCK]
                    ~perm:0o600
-                   (fun fd -> Lwt_io.write fd body)
+                   (fun fd -> Lwt_io.write fd json)
               ) >>= (fun _ -> Dream.respond
                         ~headers:["Content-Type", "text/plain"]
                         (ann_file ^ " saved"))
            )
-           (fun _ -> Dream.respond
+           (fun e -> Dream.respond
                ~code:500
                ~headers:["Content-Type", "text/plain"]
-               "File not saved.")
+               @@ "File not saved.\n\n" ^ (Exn.to_string e))
       )
               
   ]

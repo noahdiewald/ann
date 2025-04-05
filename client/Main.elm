@@ -1018,9 +1018,8 @@ view model =
                     ]
                 , Html.ul []
                     [ Html.li []
-                        [ Html.a
-                            [ Attr.href "#"
-                            , Event.onClick Write
+                        [ Html.button
+                            [ Event.onClick Write
                             ]
                             [ Html.text "Save" ]
                         ]
